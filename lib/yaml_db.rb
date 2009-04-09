@@ -24,6 +24,10 @@ module YamlDb
 	def self.reenable_logger
 		ActiveRecord::Base.logger = @@old_logger
 	end
+	
+	def self.skip_tables
+	  ['schema_info', 'schema_migrations', 'sessions']
+  end
 end
 
 
@@ -80,7 +84,7 @@ module YamlDb::Dump
 	end
 
 	def self.tables
-		ActiveRecord::Base.connection.tables.reject { |table| ['schema_info', 'schema_migrations'].include?(table) }
+		ActiveRecord::Base.connection.tables.reject { |table| YamlDb.skip_tables.include?(table) }
 	end
 
 	def self.dump_table(io, table)
@@ -142,7 +146,7 @@ module YamlDb::Load
 		ActiveRecord::Base.connection.transaction do
 			YAML.load_documents(io) do |ydoc|
 				ydoc.keys.each do |table_name|
-					next if ydoc[table_name].nil?
+					next if ydoc[table_name].nil? || YamlDb.skip_tables.include?(table_name)
 					load_table(table_name, ydoc[table_name])
 				end
 			end
